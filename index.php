@@ -67,9 +67,12 @@ if (isset($update["message"]["text"])) {
 if (isset($update["message"]["new_chat_members"])) {
 
     $chat_id = $update["message"]["chat"]["id"];
-    $nome = $update["message"]["new_chat_members"][0]["first_name"];
 
-    $texto = "Oláa, *$nome*. 🫡  
+    foreach ($update["message"]["new_chat_members"] as $membro) {
+
+        $nome = $membro["first_name"] ?? "novo membro";
+
+        $texto = "Oláa, *$nome*. 🫡  
 
 Esperamos garantir a **melhor experiência** para os nossos membros. 🤗  
 
@@ -80,23 +83,25 @@ Qualquer dúvida, me chame: **$DONO**
 
 🎰 • _𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)_";
 
-    bot("sendPhoto", [
-        "chat_id" => $chat_id,
-        "photo" => new CURLFile(__DIR__ . "/IMG_6743.JPEG"),
-        "caption" => $texto,
-        "parse_mode" => "Markdown",
-        "reply_markup" => json_encode([
-            "inline_keyboard" => [
-                [
-                    ["text" => "👑 Dono", "url" => "https://t.me/" . str_replace("@","",$DONO)],
-                    ["text" => "🛒 Produtos", "url" => $LINK_PRODUTOS]
-                ],
-                [
-                    ["text" => "⚙️ Gerenciar", "callback_data" => "painel"]
+        bot("sendPhoto", [
+            "chat_id" => $chat_id,
+            "photo" => new CURLFile(__DIR__ . "/IMG_6743.JPEG"),
+            "caption" => $texto,
+            "parse_mode" => "Markdown",
+            "reply_markup" => json_encode([
+                "inline_keyboard" => [
+                    [
+                        ["text" => "👑 Dono", "url" => "https://t.me/" . str_replace("@","",$DONO)],
+                        ["text" => "🛒 Produtos", "url" => $LINK_PRODUTOS]
+                    ],
+                    [
+                        ["text" => "⚙️ Gerenciar", "callback_data" => "painel"]
+                    ]
                 ]
-            ]
-        ])
-    ], true);
+            ])
+        ], true);
+    }
+}
 }
 
 // ===================== COMANDOS BAN / UNBAN =====================
@@ -104,7 +109,11 @@ if (isset($update["message"]["text"])) {
 
     $chat_id = $update["message"]["chat"]["id"];
     $text = $update["message"]["text"];
+    $from_id = $update["message"]["from"]["id"];
     $reply = $update["message"]["reply_to_message"]["from"]["id"] ?? null;
+
+    // Apenas admin
+    if ($from_id != $ADMIN_ID) return;
 
     if ($text === "/ban" && $reply) {
         bot("banChatMember", [
@@ -119,6 +128,7 @@ if (isset($update["message"]["text"])) {
             "user_id" => $reply
         ]);
     }
+}
 
     // ===================== ANTI-LINK =====================
     if (preg_match('/https?:\/\/|t\.me\//i', $text)) {
