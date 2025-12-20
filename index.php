@@ -90,34 +90,42 @@ if ($from_id == $ADMIN_ID && preg_match('/^\/welcome (on|off)$/', $text, $m)) {
 
 /* ================= BOAS-VINDAS ================= */
 
-if (isset($message["new_chat_members"])) {
+if (isset($update["message"]["new_chat_members"])) {
 
+    $chat_id = $update["message"]["chat"]["id"];
     $data = loadData();
-    if (($data["welcome"] ?? "on") !== "on") return;
 
-    foreach ($message["new_chat_members"] as $membro) {
+    if (($data["welcome"] ?? "on") !== "on") {
+        // welcome desligado
+    } else {
 
-        $nome = $membro["first_name"] ?? "nome";
+        foreach ($update["message"]["new_chat_members"] as $membro) {
 
-        bot("sendPhoto", [
-            "chat_id" => $chat_id,
-            "photo" => new CURLFile("IMG_6743.jpeg"),
-            "caption" =>
-                "Oláa, *$nome*. 🫡\n\n" .
-                "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
-                "No nosso grupo você poderá consultar nomes, CPFs, telefones, etc de graça!\n\n" .
-                "Além de aprender vários macetes. 😉\n" .
-                "Qualquer dúvida me chame: $DONO\n\n" .
-                "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
-            "parse_mode" => "Markdown",
-            "reply_markup" => json_encode([
-                "inline_keyboard" => [
-                    [
-                        ["text" => "🛒 Ver catálogo", "url" => $LINK_PRODUTOS]
+            // ignora se for o próprio bot
+            if ($membro["is_bot"] ?? false) continue;
+
+            $nome = $membro["first_name"] ?? "nome";
+
+            bot("sendPhoto", [
+                "chat_id" => $chat_id,
+                "photo" => new CURLFile(__DIR__ . "/IMG_6743.jpeg"),
+                "caption" =>
+                    "Oláa, *$nome*. 🫡\n\n" .
+                    "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
+                    "No nosso grupo você poderá consultar nomes, CPFs, telefones, etc de graça!\n\n" .
+                    "Além de aprender vários macetes. 😉\n" .
+                    "Qualquer dúvida me chame: $DONO\n\n" .
+                    "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
+                "parse_mode" => "Markdown",
+                "reply_markup" => json_encode([
+                    "inline_keyboard" => [
+                        [
+                            ["text" => "🛒 Ver catálogo", "url" => $LINK_PRODUTOS]
+                        ]
                     ]
-                ]
-            ])
-        ]);
+                ])
+            ]);
+        }
     }
 }
 
