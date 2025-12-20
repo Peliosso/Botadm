@@ -18,7 +18,7 @@ function bot($method, $data = []) {
     global $API;
     $ch = curl_init("$API/$method");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     return json_decode(curl_exec($ch), true);
 }
 
@@ -37,72 +37,21 @@ function saveData($data) {
 $update = json_decode(file_get_contents("php://input"), true);
 if (!$update) exit;
 
-$message = $update["message"] ?? null;
-$text = $message["text"] ?? "";
-$chat_id = $message["chat"]["id"] ?? null;
-$from_id = $message["from"]["id"] ?? null;
-
-/* ================= START ================= */
-
-if ($text === "/start") {
-
-    bot("sendMessage", [
-        "chat_id" => $chat_id,
-        "text" => "👋 Bem-vindo!\n\nVeja nosso catálogo:",
-        "reply_markup" => json_encode([
-            "inline_keyboard" => [
-                [["text" => "🛒 Produtos", "url" => $LINK_PRODUTOS]]
-            ]
-        ])
-    ]);
-}
-
-/* ================= AUTO ON / OFF ================= */
-
-if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
-
-    $data = loadData();
-    $data["auto"]["status"] = $m[1];
-    $data["auto"]["chat_id"] = $chat_id;
-    saveData($data);
-
-    bot("sendMessage", [
-        "chat_id" => $chat_id,
-        "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
-        "parse_mode" => "Markdown"
-    ]);
-}
-
-/* ================= WELCOME ON / OFF ================= */
-
-if ($from_id == $ADMIN_ID && preg_match('/^\/welcome (on|off)$/', $text, $m)) {
-
-    $data = loadData();
-    $data["welcome"] = $m[1];
-    saveData($data);
-
-    bot("sendMessage", [
-        "chat_id" => $chat_id,
-        "text" => "👋 Welcome *" . strtoupper($m[1]) . "*",
-        "parse_mode" => "Markdown"
-    ]);
-}
-
-/* ================= BOAS-VINDAS ================= */
+/* =======================================================
+   🔥 BOAS-VINDAS — PRIORIDADE MÁXIMA (NÃO MOVER)
+   ======================================================= */
 
 if (isset($update["message"]["new_chat_members"])) {
 
     $chat_id = $update["message"]["chat"]["id"];
     $data = loadData();
 
-    if (($data["welcome"] ?? "on") !== "on") {
-        // welcome desligado
-    } else {
+    if (($data["welcome"] ?? "on") === "on") {
 
         foreach ($update["message"]["new_chat_members"] as $membro) {
 
-            // ignora se for o próprio bot
-            if ($membro["is_bot"] ?? false) continue;
+            // ignora o próprio bot
+            if (!empty($membro["is_bot"])) continue;
 
             $nome = $membro["first_name"] ?? "nome";
 
@@ -127,6 +76,46 @@ if (isset($update["message"]["new_chat_members"])) {
             ]);
         }
     }
+
+    // encerra aqui para não conflitar com outros comandos
+    exit;
+}
+
+/* ================= VARIÁVEIS PADRÃO ================= */
+
+$message = $update["message"] ?? null;
+$text = $message["text"] ?? "";
+$chat_id = $message["chat"]["id"] ?? null;
+$from_id = $message["from"]["id"] ?? null;
+
+/* ================= START ================= */
+
+if ($text === "/start") {
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "👋 Bem-vindo!\n\nVeja nosso catálogo:",
+        "reply_markup" => json_encode([
+            "inline_keyboard" => [
+                [["text" => "🛒 Produtos", "url" => $LINK_PRODUTOS]]
+            ]
+        ])
+    ]);
+}
+
+/* ================= WELCOME ON / OFF ================= */
+
+if ($from_id == $ADMIN_ID && preg_match('/^\/welcome (on|off)$/', $text, $m)) {
+
+    $data = loadData();
+    $data["welcome"] = $m[1];
+    saveData($data);
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "👋 Welcome *" . strtoupper($m[1]) . "*",
+        "parse_mode" => "Markdown"
+    ]);
 }
 
 /* ================= BAN / UNBAN ================= */
