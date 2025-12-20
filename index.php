@@ -14,20 +14,22 @@ $MAX_WARNS = 3;
 
 /* ================= FUNÇÕES ================= */
 
-function bot($method, $data = [], $multipart = false) {
+function bot($method, $data = []) {
     global $API;
-    $ch = curl_init($API . "/" . $method);
+    $ch = curl_init("$API/$method");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $multipart ? $data : http_build_query($data));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
     return json_decode(curl_exec($ch), true);
 }
 
-function loadData($file) {
-    return file_exists($file) ? json_decode(file_get_contents($file), true) : [];
+function loadData() {
+    return file_exists("storage.json")
+        ? json_decode(file_get_contents("storage.json"), true)
+        : [];
 }
 
-function saveData($file, $data) {
-    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+function saveData($data) {
+    file_put_contents("storage.json", json_encode($data, JSON_PRETTY_PRINT));
 }
 
 /* ================= UPDATE ================= */
@@ -35,11 +37,17 @@ function saveData($file, $data) {
 $update = json_decode(file_get_contents("php://input"), true);
 if (!$update) exit;
 
-/* ================= /START ================= */
+$message = $update["message"] ?? null;
+$text = $message["text"] ?? "";
+$chat_id = $message["chat"]["id"] ?? null;
+$from_id = $message["from"]["id"] ?? null;
 
-if (isset($update["message"]["text"]) && $update["message"]["text"] === "/start") {
+/* ================= START ================= */
+
+if ($text === "/start") {
+
     bot("sendMessage", [
-        "chat_id" => $update["message"]["chat"]["id"],
+        "chat_id" => $chat_id,
         "text" => "👋 Bem-vindo!\n\nVeja nosso catálogo:",
         "reply_markup" => json_encode([
             "inline_keyboard" => [
@@ -51,131 +59,38 @@ if (isset($update["message"]["text"]) && $update["message"]["text"] === "/start"
 
 /* ================= AUTO ON / OFF ================= */
 
-if (isset($update["message"]["text"])) {
+if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
 
-    $text = $update["message"]["text"];
-    $chat_id = $update["message"]["chat"]["id"];
-    $from_id = $update["message"]["from"]["id"];
+    $data = loadData();
+    $data["auto"]["status"] = $m[1];
+    $data["auto"]["chat_id"] = $chat_id;
+    saveData($data);
 
-    if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
-
-        $data = loadData($STORAGE);
-
-        if ($m[1] === "on") {
-            $data["auto"] = [
-                "status" => "on",
-                "chat_id" => $chat_id
-            ];
-        } else {
-            $data["auto"]["status"] = "off";
-        }
-
-        saveData($STORAGE, $data);
-
-        bot("sendMessage", [
-            "chat_id" => $chat_id,
-            "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
-            "parse_mode" => "Markdown"
-        ]);
-    }
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
+        "parse_mode" => "Markdown"
+    ]);
 }
 
 /* ================= BOAS-VINDAS ================= */
 
-if (isset($update["message"]["new_chat_members"])) {
+if (isset($message["new_chat_members"])) {
 
-    $data = loadData($STORAGE);
+    $data = loadData();
     if (($data["welcome"] ?? "on") === "on") {
 
-        $chat_id = $update["message"]["chat"]["id"];
+        foreach ($message["new_chat_members"] as $membro) {
 
-        foreach ($update["message"]["new_chat_members"] as $membro) {
+            $nome = $membro["first_name"] ?? "membro";
 
-            $nome = $membro["first_name"] ?? "nome";
-
-            bot("sendPhoto", [
+            bot("sendMessage", [
                 "chat_id" => $chat_id,
-                "photo" => new CURLFile("IMG_6743.jpeg"),
-                "caption" =>
-                    "Oláa, *$nome*. 🫡\n\n" .
-                    "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
-                    "Qualquer dúvida me chame: $DONO\n\n" .
-                    "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
-                "parse_mode" => "Markdown",
-                "reply_markup" => json_encode([
-                    "inline_keyboard" => [
-                        [["text" => "🛒 Catálogo | Nosso site", "url" => $LINK_PRODUTOS]]
-                    ]
-                ])
-            ]);
-        }
-    }
-}
-
-/* ================= AUTO ON / OFF ================= */
-
-if (isset($update["message"]["text"])) {
-
-    $text = $update["message"]["text"];
-    $chat_id = $update["message"]["chat"]["id"];
-    $from_id = $update["message"]["from"]["id"];
-
-    if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
-
-        $data = loadData($STORAGE);
-
-        if ($m[1] === "on") {
-            $data["auto"] = [
-                "status" => "on",
-                "chat_id" => $chat_id
-            ];
-        } else {
-            $data["auto"]["status"] = "off";
-        }
-
-        saveData($STORAGE, $data);
-
-        bot("sendMessage", [
-            "chat_id" => $chat_id,
-            "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
-            "parse_mode" => "Markdown"
-        ]);
-    }
-
-/* ================= BOAS-VINDAS ================= */
-
-if (isset($update["message"]["new_chat_members"])) {
-
-    $data = loadData($STORAGE);
-    if (($data["welcome"] ?? "on") === "on") {
-
-        $chat_id = $update["message"]["chat"]["id"];
-
-        foreach ($update["message"]["new_chat_members"] as $membro) {
-
-            $nome = $membro["first_name"] ?? "nome";
-
-            bot("sendPhoto", [
-                "chat_id" => $chat_id,
-                "photo" => new CURLFile("IMG_6743.jpeg"),
-                "caption" =>
-                    "Oláa, *$nome*. 🫡\n\n" .
-                    "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
-                    "No nosso grupo você poderá consultar nomes, CPFs, telefones, etc de graça!\n\n" .
-                    "Além de aprender vários macetes. 😉\n\n" .
-                    "Qualquer dúvida me chame: $DONO\n\n" .
-                    "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
-                "parse_mode" => "Markdown",
-                "reply_markup" => json_encode([
-                    "inline_keyboard" => [
-                        [
-                            [
-                                "text" => "🛒 Catálogo | Nosso site",
-                                "url" => $LINK_PRODUTOS
-                            ]
-                        ]
-                    ]
-                ])
+                "text" =>
+                    "Olá *$nome* 🫡\n\n" .
+                    "Seja bem-vindo ao grupo.\n\n" .
+                    "Qualquer dúvida: $DONO",
+                "parse_mode" => "Markdown"
             ]);
         }
     }
@@ -183,17 +98,56 @@ if (isset($update["message"]["new_chat_members"])) {
 
 /* ================= BAN / UNBAN ================= */
 
-if (isset($update["message"]["text"], $update["message"]["reply_to_message"])) {
+if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
 
-    $text = $update["message"]["text"];
-    $chat_id = $update["message"]["chat"]["id"];
-    $from_id = $update["message"]["from"]["id"];
-    $reply_id = $update["message"]["reply_to_message"]["from"]["id"];
-    $nome = $update["message"]["reply_to_message"]["from"]["first_name"] ?? "usuário";
+    $reply_id = $message["reply_to_message"]["from"]["id"];
+    $nome = $message["reply_to_message"]["from"]["first_name"] ?? "usuário";
 
-    if ($from_id == $ADMIN_ID) {
+    if ($text === "/ban") {
 
-        if ($text === "/ban") {
+        bot("banChatMember", [
+            "chat_id" => $chat_id,
+            "user_id" => $reply_id
+        ]);
+
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => "🚫 *$nome foi banido.*",
+            "parse_mode" => "Markdown"
+        ]);
+    }
+
+    if ($text === "/unban") {
+
+        bot("unbanChatMember", [
+            "chat_id" => $chat_id,
+            "user_id" => $reply_id
+        ]);
+
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => "♻️ *$nome foi desbanido.*",
+            "parse_mode" => "Markdown"
+        ]);
+    }
+}
+
+/* ================= WARNS ================= */
+
+if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
+
+    $reply_id = $message["reply_to_message"]["from"]["id"];
+    $nome = $message["reply_to_message"]["from"]["first_name"] ?? "usuário";
+
+    $data = loadData();
+    $data["warns"][$reply_id] = $data["warns"][$reply_id] ?? 0;
+
+    if ($text === "/warn") {
+
+        $data["warns"][$reply_id]++;
+        saveData($data);
+
+        if ($data["warns"][$reply_id] >= $MAX_WARNS) {
 
             bot("banChatMember", [
                 "chat_id" => $chat_id,
@@ -202,117 +156,56 @@ if (isset($update["message"]["text"], $update["message"]["reply_to_message"])) {
 
             bot("sendMessage", [
                 "chat_id" => $chat_id,
-                "text" => "🚫 *$nome foi banido com sucesso.*",
+                "text" => "🚫 *$nome banido por warns.*",
                 "parse_mode" => "Markdown"
             ]);
-        }
 
-        if ($text === "/unban") {
-
-            bot("unbanChatMember", [
-                "chat_id" => $chat_id,
-                "user_id" => $reply_id
-            ]);
+        } else {
 
             bot("sendMessage", [
                 "chat_id" => $chat_id,
-                "text" => "♻️ *$nome foi desbanido.*",
+                "text" =>
+                    "⚠️ *$nome recebeu um warn*\n" .
+                    "({$data["warns"][$reply_id]}/$MAX_WARNS)",
                 "parse_mode" => "Markdown"
             ]);
         }
     }
-}
 
-/* ================= WARNS ================= */
+    if ($text === "/warns") {
 
-if (isset($update["message"]["text"], $update["message"]["reply_to_message"])) {
-
-    $text = $update["message"]["text"];
-    $chat_id = $update["message"]["chat"]["id"];
-    $from_id = $update["message"]["from"]["id"];
-    $reply_id = $update["message"]["reply_to_message"]["from"]["id"];
-    $nome = $update["message"]["reply_to_message"]["from"]["first_name"] ?? "usuário";
-
-    if ($from_id == $ADMIN_ID) {
-
-        $data = loadData($STORAGE);
-        $data["warns"][$reply_id] = $data["warns"][$reply_id] ?? 0;
-
-        if ($text === "/warn") {
-
-            $data["warns"][$reply_id]++;
-            saveData($STORAGE, $data);
-
-            if ($data["warns"][$reply_id] >= $MAX_WARNS) {
-
-                bot("banChatMember", [
-                    "chat_id" => $chat_id,
-                    "user_id" => $reply_id
-                ]);
-
-                bot("sendMessage", [
-                    "chat_id" => $chat_id,
-                    "text" => "🚫 *$nome foi banido (limite de warns).*",
-                    "parse_mode" => "Markdown"
-                ]);
-
-            } else {
-
-                bot("sendMessage", [
-                    "chat_id" => $chat_id,
-                    "text" =>
-                        "⚠️ *$nome recebeu um warn*\n".
-                        "({$data["warns"][$reply_id]}/$MAX_WARNS)",
-                    "parse_mode" => "Markdown"
-                ]);
-            }
-        }
-
-        if ($text === "/warns") {
-
-            bot("sendMessage", [
-                "chat_id" => $chat_id,
-                "text" => "📊 *$nome tem {$data["warns"][$reply_id]}/$MAX_WARNS warns.*",
-                "parse_mode" => "Markdown"
-            ]);
-        }
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => "📊 *$nome tem {$data["warns"][$reply_id]}/$MAX_WARNS warns.*",
+            "parse_mode" => "Markdown"
+        ]);
     }
 }
 
 /* ================= MENU ================= */
 
-if (isset($update["message"]["text"]) && $update["message"]["text"] === "/menu") {
+if ($text === "/menu") {
 
     bot("sendMessage", [
-        "chat_id" => $update["message"]["chat"]["id"],
+        "chat_id" => $chat_id,
         "text" => "📌 *Menu Administrativo*",
         "parse_mode" => "Markdown",
         "reply_markup" => json_encode([
             "inline_keyboard" => [
-                [["text" => "🚫 Ban", "callback_data" => "info_ban"]],
-                [["text" => "⚠️ Warn", "callback_data" => "info_warn"]],
-                [["text" => "👋 Welcome", "callback_data" => "info_welcome"]]
+                [["text" => "🚫 Ban", "callback_data" => "ban"]],
+                [["text" => "⚠️ Warn", "callback_data" => "warn"]]
             ]
         ])
     ]);
 }
 
-/* ================= CALLBACKS ================= */
+/* ================= CALLBACK ================= */
 
 if (isset($update["callback_query"])) {
 
-    $id = $update["callback_query"]["id"];
-    $data = $update["callback_query"]["data"];
-
-    $msgs = [
-        "info_ban" => "Use /ban respondendo a mensagem.",
-        "info_warn" => "Use /warn respondendo a mensagem.",
-        "info_welcome" => "Use /welcome on ou /welcome off."
-    ];
-
     bot("answerCallbackQuery", [
-        "callback_query_id" => $id,
-        "text" => $msgs[$data] ?? "Opção inválida",
+        "callback_query_id" => $update["callback_query"]["id"],
+        "text" => "Use os comandos respondendo a uma mensagem.",
         "show_alert" => true
     ]);
 }
