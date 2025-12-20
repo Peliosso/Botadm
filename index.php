@@ -1,44 +1,13 @@
 <?php
 
+/* ================= CONFIG ================= */
+
 $TOKEN = "8362517082:AAHh0b9FSfXlJL0ofprStTZXTKcjKZpy30A";
 $API = "https://api.telegram.org/bot$TOKEN";
-$STORAGE = "storage.json";
-$LINK_PRODUTOS = "https://jokervip.rf.gd/";
-
-function bot($method, $data = []) {
-    global $API;
-    $ch = curl_init("$API/$method");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-    return curl_exec($ch);
-}
-
-$data = file_exists($STORAGE) ? json_decode(file_get_contents($STORAGE), true) : [];
-
-if (($data["auto"]["status"] ?? "off") !== "on") {
-    exit;
-}
-
-$chat_id = $data["auto"]["chat_id"];
-
-bot("sendMessage", [
-    "chat_id" => $chat_id,
-    "text" => "💬 *Gostando das consultas?*\n\nDê uma olhada no nosso catálogo. 👇",
-    "parse_mode" => "Markdown",
-    "reply_markup" => json_encode([
-        "inline_keyboard" => [
-            [
-                [
-                    "text" => "🛒 Ver catálogo",
-                    "url" => $LINK_PRODUTOS
-                ]
-            ]
-        ]
-    ])
-]);
 
 $ADMIN_ID = 7926471341;
 $DONO = "@silenciante";
+$LINK_PRODUTOS = "https://jokervip.rf.gd/";
 
 $STORAGE = "storage.json";
 $MAX_WARNS = 3;
@@ -80,7 +49,7 @@ if (isset($update["message"]["text"]) && $update["message"]["text"] === "/start"
     ]);
 }
 
-/* ================= WELCOME ON/OFF ================= */
+/* ================= AUTO ON / OFF ================= */
 
 if (isset($update["message"]["text"])) {
 
@@ -88,17 +57,58 @@ if (isset($update["message"]["text"])) {
     $chat_id = $update["message"]["chat"]["id"];
     $from_id = $update["message"]["from"]["id"];
 
-    if ($from_id == $ADMIN_ID && preg_match('/^\/welcome (on|off)$/', $text, $m)) {
+    if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
 
         $data = loadData($STORAGE);
-        $data["welcome"] = $m[1];
+
+        if ($m[1] === "on") {
+            $data["auto"] = [
+                "status" => "on",
+                "chat_id" => $chat_id
+            ];
+        } else {
+            $data["auto"]["status"] = "off";
+        }
+
         saveData($STORAGE, $data);
 
         bot("sendMessage", [
             "chat_id" => $chat_id,
-            "text" => "👋 Welcome *" . strtoupper($m[1]) . "*",
+            "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
             "parse_mode" => "Markdown"
         ]);
+    }
+}
+
+/* ================= BOAS-VINDAS ================= */
+
+if (isset($update["message"]["new_chat_members"])) {
+
+    $data = loadData($STORAGE);
+    if (($data["welcome"] ?? "on") === "on") {
+
+        $chat_id = $update["message"]["chat"]["id"];
+
+        foreach ($update["message"]["new_chat_members"] as $membro) {
+
+            $nome = $membro["first_name"] ?? "nome";
+
+            bot("sendPhoto", [
+                "chat_id" => $chat_id,
+                "photo" => new CURLFile("IMG_6743.jpeg"),
+                "caption" =>
+                    "Oláa, *$nome*. 🫡\n\n" .
+                    "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
+                    "Qualquer dúvida me chame: $DONO\n\n" .
+                    "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
+                "parse_mode" => "Markdown",
+                "reply_markup" => json_encode([
+                    "inline_keyboard" => [
+                        [["text" => "🛒 Catálogo | Nosso site", "url" => $LINK_PRODUTOS]]
+                    ]
+                ])
+            ]);
+        }
     }
 }
 
