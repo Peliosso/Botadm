@@ -196,7 +196,17 @@ if ($text === "/stats") {
             "⚠️ Warns totais: $total_warns\n\n" .
             "👋 Welcome: *" . strtoupper($data["welcome"] ?? "on") . "*\n" .
             "🤖 Auto: *" . strtoupper($data["auto"]["status"] ?? "off") . "*",
-        "parse_mode" => "Markdown"
+        "parse_mode" => "Markdown",
+        "reply_markup" => json_encode([
+            "inline_keyboard" => [
+                [
+                    [
+                        "text" => "🗑 Apagar",
+                        "callback_data" => "delete_stats|" . $message["message_id"]
+                    ]
+                ]
+            ]
+        ])
     ]);
 }
 
@@ -384,6 +394,29 @@ if (isset($update["callback_query"])) {
     $data = $cb["data"];
     $chat_id = $cb["message"]["chat"]["id"];
     $bot_message_id = $cb["message"]["message_id"];
+
+/* DELETE STATS */
+
+if (strpos($data, "delete_stats|") === 0) {
+
+    $cmd_message_id = explode("|", $data)[1];
+
+    bot("deleteMessage", [
+        "chat_id" => $chat_id,
+        "message_id" => $bot_message_id
+    ]);
+
+    bot("deleteMessage", [
+        "chat_id" => $chat_id,
+        "message_id" => $cmd_message_id
+    ]);
+
+    bot("answerCallbackQuery", [
+        "callback_query_id" => $cb["id"]
+    ]);
+
+    exit;
+}
 
     /* DELETE AUTO MESSAGE */
     if (strpos($data, "delete_auto|") === 0) {
