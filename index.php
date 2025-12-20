@@ -247,18 +247,7 @@ if ($text === "/menu") {
     ]);
 }
 
-/* ================= CALLBACK ================= */
-
-if (isset($update["callback_query"])) {
-
-    bot("answerCallbackQuery", [
-        "callback_query_id" => $update["callback_query"]["id"],
-        "text" => "Use os comandos respondendo a uma mensagem.",
-        "show_alert" => true
-    ]);
-}
-
-/* ================= CALLBACK DELETE ================= */
+/* ================= CALLBACK (ÚNICO) ================= */
 
 if (isset($update["callback_query"])) {
 
@@ -267,6 +256,7 @@ if (isset($update["callback_query"])) {
     $chat_id = $cb["message"]["chat"]["id"];
     $bot_message_id = $cb["message"]["message_id"];
 
+    /* DELETE AUTO MESSAGE */
     if (strpos($data, "delete_auto|") === 0) {
 
         $cmd_message_id = explode("|", $data)[1];
@@ -283,9 +273,19 @@ if (isset($update["callback_query"])) {
             "message_id" => $cmd_message_id
         ]);
 
-        // responde o callback (obrigatório)
         bot("answerCallbackQuery", [
             "callback_query_id" => $cb["id"]
         ]);
+
+        exit;
     }
+
+    /* CALLBACKS GENÉRICOS (menu, info, etc) */
+    bot("answerCallbackQuery", [
+        "callback_query_id" => $cb["id"],
+        "text" => "Use os comandos respondendo a uma mensagem.",
+        "show_alert" => true
+    ]);
+
+    exit;
 }
