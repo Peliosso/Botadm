@@ -10,6 +10,9 @@ $LINK_PRODUTOS = "https://seusite.com";
 // ID do grupo (ex: -1001234567890)
 $CHAT_GRUPO = "-1003052688657";
 
+// ID do usuário que pode abrir o painel
+$ADMIN_ID = 7926471341;
+
 // Arquivo de controle
 $STORAGE = "storage.json";
 
@@ -55,7 +58,7 @@ Qualquer dúvida, me chame: **$DONO**
 
     bot("sendPhoto", [
         "chat_id" => $chat_id,
-        "photo" => new CURLFile(__DIR__ . "/IMG_6743.jpeg"),
+        "photo" => new CURLFile(__DIR__ . "/IMG_6743.JPEG"),
         "caption" => $texto,
         "parse_mode" => "Markdown",
         "reply_markup" => json_encode([
@@ -92,6 +95,14 @@ if (isset($update["message"]["text"])) {
             "user_id" => $reply
         ]);
     }
+
+    // ===================== ANTI-LINK =====================
+    if (preg_match('/https?:\/\/|t\.me\//i', $text)) {
+        bot("deleteMessage", [
+            "chat_id" => $chat_id,
+            "message_id" => $update["message"]["message_id"]
+        ]);
+    }
 }
 
 // ===================== CALLBACKS =====================
@@ -100,8 +111,19 @@ if (isset($update["callback_query"])) {
     $data = $update["callback_query"]["data"];
     $chat_id = $update["callback_query"]["message"]["chat"]["id"];
     $callback_id = $update["callback_query"]["id"];
+    $from_id = $update["callback_query"]["from"]["id"];
 
+    // ===================== PAINEL SOMENTE PARA ADMIN =====================
     if ($data === "painel") {
+        if ($from_id != $ADMIN_ID) {
+            bot("answerCallbackQuery", [
+                "callback_query_id" => $callback_id,
+                "text" => "⚠️ Apenas o administrador pode abrir este painel",
+                "show_alert" => true
+            ]);
+            exit;
+        }
+
         bot("sendMessage", [
             "chat_id" => $chat_id,
             "text" => "⚙️ *Painel Administrativo*\n\nEscolha uma opção:",
@@ -133,8 +155,6 @@ if (isset($update["callback_query"])) {
 }
 
 // ===================== MENSAGEM AUTOMÁTICA (SEM CRON) =====================
-// roda sempre que houver qualquer atividade no grupo
-
 if ($update) {
 
     $data = file_exists($STORAGE)
@@ -145,7 +165,6 @@ if ($update) {
 
     if (($AGORA - $ultimo) >= $INTERVALO) {
 
-        // apaga a mensagem anterior
         if (isset($data["last_msg"])) {
             bot("deleteMessage", [
                 "chat_id" => $CHAT_GRUPO,
@@ -153,7 +172,6 @@ if ($update) {
             ]);
         }
 
-        // envia nova mensagem
         $msg = bot("sendMessage", [
             "chat_id" => $CHAT_GRUPO,
             "text" => "✨ *Gostando das consultas?*\n\nConfira abaixo o nosso catálogo de produtos.",
@@ -167,7 +185,6 @@ if ($update) {
             ])
         ]);
 
-        // salva controle
         file_put_contents($STORAGE, json_encode([
             "last_time" => $AGORA,
             "last_msg" => $msg["result"]["message_id"]
