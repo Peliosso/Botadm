@@ -127,10 +127,20 @@ if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
     $data["auto"]["chat_id"] = $chat_id;
     saveData($data);
 
-    bot("sendMessage", [
+    $sent = bot("sendMessage", [
         "chat_id" => $chat_id,
         "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
-        "parse_mode" => "Markdown"
+        "parse_mode" => "Markdown",
+        "reply_markup" => json_encode([
+            "inline_keyboard" => [
+                [
+                    [
+                        "text" => "🗑 Apagar",
+                        "callback_data" => "delete_auto|" . $message["message_id"]
+                    ]
+                ]
+            ]
+        ])
     ]);
 }
 
@@ -246,4 +256,36 @@ if (isset($update["callback_query"])) {
         "text" => "Use os comandos respondendo a uma mensagem.",
         "show_alert" => true
     ]);
+}
+
+/* ================= CALLBACK DELETE ================= */
+
+if (isset($update["callback_query"])) {
+
+    $cb = $update["callback_query"];
+    $data = $cb["data"];
+    $chat_id = $cb["message"]["chat"]["id"];
+    $bot_message_id = $cb["message"]["message_id"];
+
+    if (strpos($data, "delete_auto|") === 0) {
+
+        $cmd_message_id = explode("|", $data)[1];
+
+        // apaga a mensagem do bot
+        bot("deleteMessage", [
+            "chat_id" => $chat_id,
+            "message_id" => $bot_message_id
+        ]);
+
+        // apaga o comando enviado
+        bot("deleteMessage", [
+            "chat_id" => $chat_id,
+            "message_id" => $cmd_message_id
+        ]);
+
+        // responde o callback (obrigatório)
+        bot("answerCallbackQuery", [
+            "callback_query_id" => $cb["id"]
+        ]);
+    }
 }
