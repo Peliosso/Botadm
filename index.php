@@ -144,6 +144,52 @@ if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
     ]);
 }
 
+/* ================= ANTI-LINK ON / OFF ================= */
+
+if ($from_id == $ADMIN_ID && preg_match('/^\/antilink (on|off)$/', $text, $m)) {
+
+    $data = loadData();
+    $data["antilink"] = $m[1];
+    saveData($data);
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "🔗 Anti-link *" . strtoupper($m[1]) . "*",
+        "parse_mode" => "Markdown"
+    ]);
+}
+
+/* ================= ANTI-LINK ================= */
+
+if (!empty($text)) {
+
+    $data = loadData();
+
+    if (($data["antilink"] ?? "off") === "on") {
+
+        // ignora admins
+        if ($from_id != $ADMIN_ID) {
+
+            if (preg_match('/(http|https|t\.me|www\.)/i', $text)) {
+
+                // apaga a mensagem
+                bot("deleteMessage", [
+                    "chat_id" => $chat_id,
+                    "message_id" => $message["message_id"]
+                ]);
+
+                // aviso (opcional)
+                bot("sendMessage", [
+                    "chat_id" => $chat_id,
+                    "text" => "🚫 Links não são permitidos aqui.",
+                ]);
+
+                exit;
+            }
+        }
+    }
+}
+
 /* ================= BAN / UNBAN ================= */
 
 if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
