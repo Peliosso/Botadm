@@ -118,6 +118,22 @@ if ($from_id == $ADMIN_ID && preg_match('/^\/welcome (on|off)$/', $text, $m)) {
     ]);
 }
 
+/* ================= AUTO ON / OFF ================= */
+
+if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
+
+    $data = loadData();
+    $data["auto"]["status"] = $m[1];
+    $data["auto"]["chat_id"] = $chat_id;
+    saveData($data);
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
+        "parse_mode" => "Markdown"
+    ]);
+}
+
 /* ================= BAN / UNBAN ================= */
 
 if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
