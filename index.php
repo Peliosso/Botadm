@@ -180,6 +180,135 @@ if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
     }
 }
 
+/* ================= STATS ================= */
+
+if ($text === "/stats") {
+
+    $data = loadData();
+    $total_warns = array_sum($data["warns"] ?? []);
+    $users_warned = count($data["warns"] ?? []);
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" =>
+            "📊 *Estatísticas do Grupo*\n\n" .
+            "👥 Usuários advertidos: $users_warned\n" .
+            "⚠️ Warns totais: $total_warns\n\n" .
+            "👋 Welcome: *" . strtoupper($data["welcome"] ?? "on") . "*\n" .
+            "🤖 Auto: *" . strtoupper($data["auto"]["status"] ?? "off") . "*",
+        "parse_mode" => "Markdown"
+    ]);
+}
+
+/* ================= INFO ================= */
+
+if ($text === "/info" && isset($message["reply_to_message"])) {
+
+    $u = $message["reply_to_message"]["from"];
+    $data = loadData();
+
+    $id = $u["id"];
+    $nome = $u["first_name"] ?? "-";
+    $user = $u["username"] ?? "-";
+    $warns = $data["warns"][$id] ?? 0;
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" =>
+            "👤 *Informações do Usuário*\n\n" .
+            "🆔 ID: `$id`\n" .
+            "📛 Nome: $nome\n" .
+            "🔗 Username: @$user\n" .
+            "⚠️ Warns: $warns/$MAX_WARNS",
+        "parse_mode" => "Markdown"
+    ]);
+}
+
+/* ================= ANTI-FLOOD ================= */
+
+if (isset($message["from"]["id"]) && !$message["from"]["is_bot"]) {
+
+    $uid = $message["from"]["id"];
+    $now = time();
+    $data = loadData();
+
+    $data["flood"][$uid] = array_filter(
+        $data["flood"][$uid] ?? [],
+        fn($t) => $t > $now - 7
+    );
+
+    $data["flood"][$uid][] = $now;
+
+    if (count($data["flood"][$uid]) >= 5) {
+
+        bot("restrictChatMember", [
+            "chat_id" => $chat_id,
+            "user_id" => $uid,
+            "permissions" => json_encode([
+                "can_send_messages" => false
+            ]),
+            "until_date" => $now + 300
+        ]);
+
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => "🔇 Usuário mutado por flood (5 minutos)."
+        ]);
+
+        $data["flood"][$uid] = [];
+    }
+
+    saveData($data);
+}
+
+/* ================= MUTE ================= */
+
+if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
+
+    $uid = $message["reply_to_message"]["from"]["id"];
+    $nome = $message["reply_to_message"]["from"]["first_name"] ?? "usuário";
+
+    if (preg_match('/^\/mute (\d+)(m|h)$/', $text, $m)) {
+
+        $tempo = $m[1] * ($m[2] == "h" ? 3600 : 60);
+
+        bot("restrictChatMember", [
+            "chat_id" => $chat_id,
+            "user_id" => $uid,
+            "permissions" => json_encode([
+                "can_send_messages" => false
+            ]),
+            "until_date" => time() + $tempo
+        ]);
+
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => "🔇 *$nome mutado por {$m[1]}{$m[2]}.*",
+            "parse_mode" => "Markdown"
+        ]);
+    }
+
+    if ($text === "/unmute") {
+
+        bot("restrictChatMember", [
+            "chat_id" => $chat_id,
+            "user_id" => $uid,
+            "permissions" => json_encode([
+                "can_send_messages" => true,
+                "can_send_media_messages" => true,
+                "can_send_other_messages" => true,
+                "can_add_web_page_previews" => true
+            ])
+        ]);
+
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => "🔊 *$nome foi desmutado.*",
+            "parse_mode" => "Markdown"
+        ]);
+    }
+}
+
 /* ================= WARNS ================= */
 
 if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
