@@ -1,13 +1,44 @@
 <?php
 
-/* ================= CONFIG ================= */
-
 $TOKEN = "8362517082:AAHh0b9FSfXlJL0ofprStTZXTKcjKZpy30A";
 $API = "https://api.telegram.org/bot$TOKEN";
+$STORAGE = "storage.json";
+$LINK_PRODUTOS = "https://jokervip.rf.gd/";
+
+function bot($method, $data = []) {
+    global $API;
+    $ch = curl_init("$API/$method");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    return curl_exec($ch);
+}
+
+$data = file_exists($STORAGE) ? json_decode(file_get_contents($STORAGE), true) : [];
+
+if (($data["auto"]["status"] ?? "off") !== "on") {
+    exit;
+}
+
+$chat_id = $data["auto"]["chat_id"];
+
+bot("sendMessage", [
+    "chat_id" => $chat_id,
+    "text" => "💬 *Gostando das consultas?*\n\nDê uma olhada no nosso catálogo. 👇",
+    "parse_mode" => "Markdown",
+    "reply_markup" => json_encode([
+        "inline_keyboard" => [
+            [
+                [
+                    "text" => "🛒 Ver catálogo",
+                    "url" => $LINK_PRODUTOS
+                ]
+            ]
+        ]
+    ])
+]);
 
 $ADMIN_ID = 7926471341;
 $DONO = "@silenciante";
-$LINK_PRODUTOS = "https://jokervip.rf.gd/";
 
 $STORAGE = "storage.json";
 $MAX_WARNS = 3;
@@ -71,7 +102,35 @@ if (isset($update["message"]["text"])) {
     }
 }
 
-/* ================= BOAS-VINDAS ================= */
+/* ================= AUTO ON / OFF ================= */
+
+if (isset($update["message"]["text"])) {
+
+    $text = $update["message"]["text"];
+    $chat_id = $update["message"]["chat"]["id"];
+    $from_id = $update["message"]["from"]["id"];
+
+    if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
+
+        $data = loadData($STORAGE);
+
+        if ($m[1] === "on") {
+            $data["auto"] = [
+                "status" => "on",
+                "chat_id" => $chat_id
+            ];
+        } else {
+            $data["auto"]["status"] = "off";
+        }
+
+        saveData($STORAGE, $data);
+
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => "🤖 Auto mensagem *" . strtoupper($m[1]) . "*",
+            "parse_mode" => "Markdown"
+        ]);
+    }
 
 /* ================= BOAS-VINDAS ================= */
 
