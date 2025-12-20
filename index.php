@@ -39,6 +39,30 @@ function bot($method, $data = [], $multipart = false) {
 $update = json_decode(file_get_contents("php://input"), true);
 $AGORA = time();
 
+// ===================== COMANDO /START =====================
+if (isset($update["message"]["text"])) {
+    $text = $update["message"]["text"];
+    $chat_id = $update["message"]["chat"]["id"];
+    $from_id = $update["message"]["from"]["id"];
+
+    if ($text === "/start") {
+        $msg = "👋 Olá, bem-vindo(a)!\n\nNo nosso grupo você poderá consultar nomes, CPFs, telefones, etc. de graça!\n\nQualquer dúvida, me chame: $DONO";
+
+        bot("sendMessage", [
+            "chat_id" => $chat_id,
+            "text" => $msg,
+            "parse_mode" => "Markdown",
+            "reply_markup" => json_encode([
+                "inline_keyboard" => [
+                    [
+                        ["text" => "🛒 Produtos", "url" => $LINK_PRODUTOS]
+                    ]
+                ]
+            ])
+        ]);
+    }
+}
+
 // ===================== BOAS-VINDAS =====================
 if (isset($update["message"]["new_chat_members"])) {
 
