@@ -73,26 +73,51 @@ if ($from_id == $ADMIN_ID && preg_match('/^\/auto (on|off)$/', $text, $m)) {
     ]);
 }
 
+/* ================= WELCOME ON / OFF ================= */
+
+if ($from_id == $ADMIN_ID && preg_match('/^\/welcome (on|off)$/', $text, $m)) {
+
+    $data = loadData();
+    $data["welcome"] = $m[1];
+    saveData($data);
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "👋 Welcome *" . strtoupper($m[1]) . "*",
+        "parse_mode" => "Markdown"
+    ]);
+}
+
 /* ================= BOAS-VINDAS ================= */
 
 if (isset($message["new_chat_members"])) {
 
     $data = loadData();
-    if (($data["welcome"] ?? "on") === "on") {
+    if (($data["welcome"] ?? "on") !== "on") return;
 
-        foreach ($message["new_chat_members"] as $membro) {
+    foreach ($message["new_chat_members"] as $membro) {
 
-            $nome = $membro["first_name"] ?? "membro";
+        $nome = $membro["first_name"] ?? "nome";
 
-            bot("sendMessage", [
-                "chat_id" => $chat_id,
-                "text" =>
-                    "Olá *$nome* 🫡\n\n" .
-                    "Seja bem-vindo ao grupo.\n\n" .
-                    "Qualquer dúvida: $DONO",
-                "parse_mode" => "Markdown"
-            ]);
-        }
+        bot("sendPhoto", [
+            "chat_id" => $chat_id,
+            "photo" => new CURLFile("IMG_6743.jpeg"),
+            "caption" =>
+                "Oláa, *$nome*. 🫡\n\n" .
+                "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
+                "No nosso grupo você poderá consultar nomes, CPFs, telefones, etc de graça!\n\n" .
+                "Além de aprender vários macetes. 😉\n" .
+                "Qualquer dúvida me chame: $DONO\n\n" .
+                "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
+            "parse_mode" => "Markdown",
+            "reply_markup" => json_encode([
+                "inline_keyboard" => [
+                    [
+                        ["text" => "🛒 Ver catálogo", "url" => $LINK_PRODUTOS]
+                    ]
+                ]
+            ])
+        ]);
     }
 }
 
