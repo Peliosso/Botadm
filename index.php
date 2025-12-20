@@ -73,6 +73,8 @@ if (isset($update["message"]["text"])) {
 
 /* ================= BOAS-VINDAS ================= */
 
+/* ================= BOAS-VINDAS ================= */
+
 if (isset($update["message"]["new_chat_members"])) {
 
     $data = loadData($STORAGE);
@@ -82,15 +84,29 @@ if (isset($update["message"]["new_chat_members"])) {
 
         foreach ($update["message"]["new_chat_members"] as $membro) {
 
-            $nome = $membro["first_name"] ?? "novo membro";
+            $nome = $membro["first_name"] ?? "nome";
 
-            bot("sendMessage", [
+            bot("sendPhoto", [
                 "chat_id" => $chat_id,
-                "text" =>
-                    "👋 *Bem-vindo(a), $nome!*\n\n".
-                    "Consultas grátis no grupo.\n\n".
-                    "Dúvidas: $DONO",
-                "parse_mode" => "Markdown"
+                "photo" => new CURLFile("IMG_6743.jpeg"),
+                "caption" =>
+                    "Oláa, *$nome*. 🫡\n\n" .
+                    "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
+                    "No nosso grupo você poderá consultar nomes, CPFs, telefones, etc de graça!\n\n" .
+                    "Além de aprender vários macetes. 😉\n\n" .
+                    "Qualquer dúvida me chame: $DONO\n\n" .
+                    "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
+                "parse_mode" => "Markdown",
+                "reply_markup" => json_encode([
+                    "inline_keyboard" => [
+                        [
+                            [
+                                "text" => "🛒 Catálogo | Nosso site",
+                                "url" => $LINK_PRODUTOS
+                            ]
+                        ]
+                    ]
+                ])
             ]);
         }
     }
