@@ -5,7 +5,7 @@ $TOKEN = "8362517082:AAHh0b9FSfXlJL0ofprStTZXTKcjKZpy30A";
 $API = "https://api.telegram.org/bot$TOKEN";
 
 $DONO = "@silenciante";
-$LINK_PRODUTOS = "https://seusite.com";
+$LINK_PRODUTOS = "https://jokervip.rf.gd/";
 
 // ID do grupo (ex: -1001234567890)
 $CHAT_GRUPO = "-1003052688657";
