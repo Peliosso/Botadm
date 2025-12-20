@@ -55,7 +55,7 @@ Qualquer dúvida, me chame: **$DONO**
 
     bot("sendPhoto", [
         "chat_id" => $chat_id,
-        "photo" => new CURLFile(__DIR__ . "/IMG_6743.jpg"),
+        "photo" => new CURLFile(__DIR__ . "/IMG_6743.jpeg"),
         "caption" => $texto,
         "parse_mode" => "Markdown",
         "reply_markup" => json_encode([
