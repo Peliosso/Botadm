@@ -32,6 +32,33 @@ function saveData($data) {
     file_put_contents("storage.json", json_encode($data, JSON_PRETTY_PRINT));
 }
 
+function askSky($prompt) {
+    $apiKey = getenv("WRMGPT_API_KEY");
+    if (!$apiKey) return "⚠️ API Key não configurada.";
+
+    $ch = curl_init("https://api.wrmgpt.com/v1/chat/completions");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer $apiKey",
+            "Content-Type: application/json"
+        ],
+        CURLOPT_POSTFIELDS => json_encode([
+            "model" => "wormgpt-v7",
+            "messages" => [
+                ["role" => "user", "content" => $prompt]
+            ]
+        ])
+    ]);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    $data = json_decode($response, true);
+    return $data["choices"][0]["message"]["content"] ?? "❌ Erro ao obter resposta.";
+}
+
 /* ================= UPDATE ================= */
 
 $update = json_decode(file_get_contents("php://input"), true);
@@ -224,6 +251,28 @@ if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
             "parse_mode" => "Markdown"
         ]);
     }
+}
+
+/* ================= SKY AI ================= */
+
+if (preg_match('/^\/sky\s+(.+)/s', $text, $m)) {
+
+    $pergunta = trim($m[1]);
+
+    bot("sendChatAction", [
+        "chat_id" => $chat_id,
+        "action" => "typing"
+    ]);
+
+    $resposta = askSky($pergunta);
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "🧠 *Sky AI responde:*\n\n$resposta",
+        "parse_mode" => "Markdown"
+    ]);
+
+    exit;
 }
 
 /* ================= STATS ================= */
