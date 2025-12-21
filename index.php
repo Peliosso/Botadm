@@ -137,30 +137,37 @@ $text = $message["text"] ?? "";
 $chat_id = $message["chat"]["id"] ?? null;
 $from_id = $message["from"]["id"] ?? null;
 
-/* ================= SKY (VERSÃO FINAL) ================= */
+/* ================= SKY (FIX DEFINITIVO) ================= */
 
-if (preg_match('/^\/sky\s+(.+)/s', $text, $m)) {
+if (isset($text) && preg_match('/^\/sky\s+(.+)/s', $text, $m)) {
 
+    // anti-duplicação
     if (skyAlreadyProcessed($chat_id, $message["message_id"])) {
+        http_response_code(200);
+        echo "OK";
         exit;
     }
 
-    // responde rápido ao Telegram
+    // responde IMEDIATAMENTE ao Telegram
     http_response_code(200);
+    echo "OK";
+
     if (function_exists("fastcgi_finish_request")) {
         fastcgi_finish_request();
     }
+
+    $pergunta = trim($m[1]);
 
     bot("sendChatAction", [
         "chat_id" => $chat_id,
         "action" => "typing"
     ]);
 
-    $pergunta = trim($m[1]);
     $resposta = askSky($pergunta);
 
     if (mb_strlen($resposta) > 3500) {
-        $resposta = mb_substr($resposta, 0, 3400) . "\n\n*(Resposta resumida automaticamente)*";
+        $resposta = mb_substr($resposta, 0, 3400)
+            . "\n\n*(Resposta resumida automaticamente)*";
     }
 
     bot("sendMessage", [
