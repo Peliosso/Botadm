@@ -19,7 +19,9 @@ function bot($method, $data = []) {
     $ch = curl_init("$API/$method");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    return json_decode(curl_exec($ch), true);
+    $res = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($res, true);
 }
 
 function loadData() {
@@ -32,14 +34,19 @@ function saveData($data) {
     file_put_contents("storage.json", json_encode($data, JSON_PRETTY_PRINT));
 }
 
+/* ================= SKY FUNÇÕES ================= */
+
 function askSky($prompt) {
     $apiKey = getenv("WRMGPT_API_KEY");
-    if (!$apiKey) return "⚠️ API Key não configurada.";
+    if (!$apiKey) {
+        return "⚠️ API Key não configurada.";
+    }
 
     $ch = curl_init("https://api.wrmgpt.com/v1/chat/completions");
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_TIMEOUT => 25,
         CURLOPT_HTTPHEADER => [
             "Authorization: Bearer $apiKey",
             "Content-Type: application/json"
@@ -59,14 +66,37 @@ function askSky($prompt) {
     return $data["choices"][0]["message"]["content"] ?? "❌ Erro ao obter resposta.";
 }
 
+function skyAlreadyProcessed($chat_id, $message_id) {
+    $file = __DIR__ . "/sky_processed.json";
+    $data = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
+
+    $key = $chat_id . "_" . $message_id;
+    if (isset($data[$key])) return true;
+
+    $data[$key] = time();
+
+    foreach ($data as $k => $t) {
+        if ($t < time() - 3600) unset($data[$k]);
+    }
+
+    file_put_contents($file, json_encode($data));
+    return false;
+}
+
+function skyTemplate($content) {
+    return
+"✅ | *RESPOSTA CONCLUÍDA - SKY*\n\n" .
+$content . "\n\n" .
+"🔻 *Caso a resposta não tenha sido enviada por completo, envie a pergunta novamente de forma mais objetiva.*\n\n" .
+"🤖 @JokerVipAdmin_bot";
+}
+
 /* ================= UPDATE ================= */
 
 $update = json_decode(file_get_contents("php://input"), true);
 if (!$update) exit;
 
-/* =======================================================
-   🔥 BOAS-VINDAS — PRIORIDADE MÁXIMA (NÃO MOVER)
-   ======================================================= */
+/* ================= BOAS-VINDAS ================= */
 
 if (isset($update["message"]["new_chat_members"])) {
 
@@ -74,12 +104,9 @@ if (isset($update["message"]["new_chat_members"])) {
     $data = loadData();
 
     if (($data["welcome"] ?? "on") === "on") {
-
         foreach ($update["message"]["new_chat_members"] as $membro) {
 
-            // ignora o próprio bot
             if (!empty($membro["is_bot"])) continue;
-
             $nome = $membro["first_name"] ?? "nome";
 
             bot("sendPhoto", [
@@ -88,37 +115,66 @@ if (isset($update["message"]["new_chat_members"])) {
                 "caption" =>
                     "Oláa, *$nome*. 🫡\n\n" .
                     "Esperamos garantir a melhor experiência para os nossos membros. 🤗\n\n" .
-                    "No nosso grupo você poderá consultar nomes, CPFs, telefones, etc de graça!\n\n" .
-                    "Além de aprender vários macetes. 😉\n" .
-                    "Qualquer dúvida me chame: $DONO\n\n" .
+                    "Consultas grátis e vários macetes. 😉\n\n" .
+                    "Qualquer dúvida: $DONO\n\n" .
                     "🎰 • 𝓙𝓸𝓴𝓮𝓻 (𝓥𝓲𝓹)",
                 "parse_mode" => "Markdown",
                 "reply_markup" => json_encode([
                     "inline_keyboard" => [
-                        [
-                            ["text" => "🛒 Ver catálogo", "url" => $LINK_PRODUTOS]
-                        ]
+                        [["text" => "🛒 Ver catálogo", "url" => $LINK_PRODUTOS]]
                     ]
                 ])
             ]);
         }
     }
-
-    // encerra aqui para não conflitar com outros comandos
     exit;
 }
 
-/* ================= VARIÁVEIS PADRÃO ================= */
+/* ================= VARIÁVEIS ================= */
 
 $message = $update["message"] ?? null;
 $text = $message["text"] ?? "";
 $chat_id = $message["chat"]["id"] ?? null;
 $from_id = $message["from"]["id"] ?? null;
 
+/* ================= SKY (VERSÃO FINAL) ================= */
+
+if (preg_match('/^\/sky\s+(.+)/s', $text, $m)) {
+
+    if (skyAlreadyProcessed($chat_id, $message["message_id"])) {
+        exit;
+    }
+
+    // responde rápido ao Telegram
+    http_response_code(200);
+    if (function_exists("fastcgi_finish_request")) {
+        fastcgi_finish_request();
+    }
+
+    bot("sendChatAction", [
+        "chat_id" => $chat_id,
+        "action" => "typing"
+    ]);
+
+    $pergunta = trim($m[1]);
+    $resposta = askSky($pergunta);
+
+    if (mb_strlen($resposta) > 3500) {
+        $resposta = mb_substr($resposta, 0, 3400) . "\n\n*(Resposta resumida automaticamente)*";
+    }
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => skyTemplate($resposta),
+        "parse_mode" => "Markdown"
+    ]);
+
+    exit;
+}
+
 /* ================= START ================= */
 
 if ($text === "/start") {
-
     bot("sendMessage", [
         "chat_id" => $chat_id,
         "text" => "👋 Bem-vindo!\n\nVeja nosso catálogo:",
@@ -251,28 +307,6 @@ if ($from_id == $ADMIN_ID && isset($message["reply_to_message"])) {
             "parse_mode" => "Markdown"
         ]);
     }
-}
-
-/* ================= SKY AI ================= */
-
-if (preg_match('/^\/sky\s+(.+)/s', $text, $m)) {
-
-    $pergunta = trim($m[1]);
-
-    bot("sendChatAction", [
-        "chat_id" => $chat_id,
-        "action" => "typing"
-    ]);
-
-    $resposta = askSky($pergunta);
-
-    bot("sendMessage", [
-        "chat_id" => $chat_id,
-        "text" => "🧠 *Sky AI responde:*\n\n$resposta",
-        "parse_mode" => "Markdown"
-    ]);
-
-    exit;
 }
 
 /* ================= STATS ================= */
