@@ -33,12 +33,15 @@ if (!empty($data["auto"]["last_message_id"])) {
 /* ENVIA NOVA */
 $msg = bot("sendMessage", [
     "chat_id" => $chat_id,
-    "text" => "💬 *Gostando das consultas?*\n\nDê uma olhada no nosso catálogo. 👇",
+    "text" => "💬 *Gostando das consultas?*\n\nDê uma olhada no nosso catálogo ou teste nossa IA. 👇",
     "parse_mode" => "Markdown",
     "reply_markup" => json_encode([
         "inline_keyboard" => [
             [
-                ["text" => "🛒 Ver catálogo", "url" => $LINK_PRODUTOS]
+                ["text" => "🛒 • Ver catálogo", "url" => $LINK_PRODUTOS]
+            ],
+            [
+                ["text" => "🤖 • IA sem censura (Free)", "url" => "https://jokervip.rf.gd/ai.html"]
             ]
         ]
     ])
