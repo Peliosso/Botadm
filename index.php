@@ -5,7 +5,7 @@
 $TOKEN = "8362517082:AAHh0b9FSfXlJL0ofprStTZXTKcjKZpy30A";
 $API = "https://api.telegram.org/bot$TOKEN";
 
-$ADMIN_ID = 7926471341;
+$ADMIN_ID = 8374452852;
 $DONO = "@silenciante";
 $LINK_PRODUTOS = "https://jokervip.rf.gd/";
 
